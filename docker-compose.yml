@@ -11,8 +11,8 @@ services:
       - "3000"
     restart: always
     networks:
-      - bridge   # Добавляем подключение к сети bridge
+      - proxy-network
 
 networks:
-  bridge:
+  proxy-network:
     external: true
