@@ -2,7 +2,7 @@ version: '3.8'
 services:
   web:
     build: .
-    container_name: my-next-app
+    container_name: unclespace
     environment:
       - VIRTUAL_HOST=unclespace.ru
       - LETSENCRYPT_HOST=unclespace.ru
