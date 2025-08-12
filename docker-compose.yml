@@ -1,0 +1,12 @@
+version: '3.8'
+services:
+  web:
+    build: .
+    container_name: my-next-app
+    environment:
+      - VIRTUAL_HOST=unclespace.ru
+      - LETSENCRYPT_HOST=unclespace.ru
+      - LETSENCRYPT_EMAIL=dmitrachkovivan@gmail.com
+    expose:
+      - "3000"
+    restart: always
