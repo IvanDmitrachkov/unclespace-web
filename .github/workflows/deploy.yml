@@ -38,8 +38,8 @@ jobs:
             set -euxo pipefail
             echo "=== Начало деплоя ==="
             
-            cd /app/unclespace || { echo "Ошибка: директория не найдена"; exit 1; }
-            git config --global --add safe.directory /app/unclespace
+            cd /var/www/unclespace || { echo "Ошибка: директория не найдена"; exit 1; }
+            git config --global --add safe.directory /var/www/unclespace
             git reset --hard
             git pull origin main
             
