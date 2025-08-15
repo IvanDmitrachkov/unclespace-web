@@ -7,25 +7,29 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20  # Увеличил таймаут
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup SSH
+      - name: Validate SSH Key
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          echo "${{ secrets.VPS_HOST }} ssh-ed25519 AAAAC3..." >> ~/.ssh/known_hosts
+          ssh-keygen -l -f ~/.ssh/deploy_key || (echo "Invalid SSH key"; exit 1)
+
+      - name: Add Server to Known Hosts
+        run: |
+          ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
 
       - name: Test SSH Connection
         run: |
           ssh -i ~/.ssh/deploy_key \
               -o StrictHostKeyChecking=no \
               ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
-              "echo 'SSH подключение успешно!'"
+              "docker --version && git --version"
 
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v0.1.7
@@ -33,20 +37,39 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          script_timeout: 15m
+          script_timeout: 20m
+          envs: GIT_SSH_COMMAND="ssh -i ~/.ssh/deploy_key"
           script: |
             set -euxo pipefail
-            echo "=== Начало деплоя ==="
+            echo "=== Deployment Started ==="
             
-            cd /var/www/unclespace || { echo "Ошибка: директория не найдена"; exit 1; }
-            git config --global --add safe.directory /var/www/unclespace
-            git reset --hard
+            # Create directory if not exists
+            sudo mkdir -p /app/unclespace
+            sudo chown -R $USER:$USER /app/unclespace
+            cd /app/unclespace || exit 1
+            
+            # Init repository if needed
+            if [ ! -d .git ]; then
+              git clone ${{ github.repository_url }} .
+              git checkout main
+            fi
+            
+            # Update code
+            git config --global --add safe.directory /app/unclespace
+            git reset --hard HEAD
+            git clean -fd
             git pull origin main
             
+            # Docker operations
             docker compose version
-            docker compose down --remove-orphans
+            docker compose down --remove-orphans --timeout 60
             docker compose build --no-cache --pull
             docker compose up -d --force-recreate
             
-            echo "=== Деплой успешен ==="
-            docker ps
+            # Cleanup
+            docker system prune -f --filter "until=24h"
+            
+            echo "=== Deployment Successful ==="
+            echo "Running containers:"
+            docker ps --format "table {{.ID}}\t{{.Names}}\t{{.Status}}"
+            echo "Last commit: $(git log -1 --oneline)"
