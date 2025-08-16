@@ -12,19 +12,12 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.8.1
+        uses: appleboy/ssh-action@v1.8.0  # Исправленная версия
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.SSH_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            echo "--> 1. Переходим в директорию проекта"
-            cd /opt/apps/unclespace || { echo "Ошибка: директория не существует"; exit 1; }
-            
-            echo "--> 2. Обновляем код"
-            git pull origin main || { echo "Ошибка git pull"; exit 1; }
-            
-            echo "--> 3. Запускаем Docker Compose"
-            docker-compose -f docker-compose.prod.yml up -d --build || { echo "Ошибка Docker"; exit 1; }
-            
-            echo "--> Деплой успешно завершён!"
+            cd /opt/apps/nextjs-app
+            git pull
+            docker-compose up -d --build
