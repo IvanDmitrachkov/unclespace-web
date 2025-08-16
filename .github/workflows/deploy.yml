@@ -12,7 +12,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.8.0  # Исправленная версия
+        uses: appleboy/ssh-action@v1.2.2  # Исправленная версия
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.SSH_USERNAME }}
