@@ -19,5 +19,9 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
             cd /opt/apps/unclespace
-            git pull
+            if [ ! -d .git ]; then
+              git clone ${{ secrets.REPO_URL }} .
+            fi
+            git pull origin main
+            
             docker-compose up -d --build
