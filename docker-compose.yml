@@ -1,10 +1,15 @@
 services:
-  app:
+  unclespace:
     build: .
-    ports:
-      - "3000:3000"
+    container_name: unclespace
+    restart: unless-stopped
     volumes:
       - .:/app
       - /app/node_modules
-    environment:
-      - NODE_ENV=development
+    env_file: .env
+    networks:
+      - proxy_network  # Общая сеть для Nginx
+
+networks:
+  proxy_network:
+    external: true     # Создается отдельно для Nginx

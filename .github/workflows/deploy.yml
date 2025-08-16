@@ -1,5 +1,4 @@
-name: Deploy to Production
-
+name: Deploy Next.js
 on:
   push:
     branches: [main]
@@ -7,69 +6,15 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 20  # Увеличил таймаут
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Validate SSH Key
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          ssh-keygen -l -f ~/.ssh/deploy_key || (echo "Invalid SSH key"; exit 1)
-
-      - name: Add Server to Known Hosts
-        run: |
-          ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
-
-      - name: Test SSH Connection
-        run: |
-          ssh -i ~/.ssh/deploy_key \
-              -o StrictHostKeyChecking=no \
-              ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
-              "docker --version && git --version"
-
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v0.1.7
+      - name: SSH & Deploy
+        uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
+          username: ivandmitrachkov
           key: ${{ secrets.VPS_SSH_KEY }}
-          script_timeout: 20m
-          envs: GIT_SSH_COMMAND="ssh -i ~/.ssh/deploy_key"
           script: |
-            set -euxo pipefail
-            echo "=== Deployment Started ==="
-            
-            # Create directory if not exists
-            sudo mkdir -p /app/unclespace
-            sudo chown -R $USER:$USER /app/unclespace
-            cd /app/unclespace || exit 1
-            
-            # Init repository if needed
-            if [ ! -d .git ]; then
-              git clone ${{ github.repository_url }} .
-              git checkout main
-            fi
-            
-            # Update code
-            git config --global --add safe.directory /app/unclespace
-            git reset --hard HEAD
-            git clean -fd
+            cd /opt/apps/unclespace
             git pull origin main
-            
-            # Docker operations
-            docker compose version
-            docker compose down --remove-orphans --timeout 60
-            docker compose build --no-cache --pull
-            docker compose up -d --force-recreate
-            
-            # Cleanup
-            docker system prune -f --filter "until=24h"
-            
-            echo "=== Deployment Successful ==="
-            echo "Running containers:"
-            docker ps --format "table {{.ID}}\t{{.Names}}\t{{.Status}}"
-            echo "Last commit: $(git log -1 --oneline)"
+            docker-compose up -d --build
+
